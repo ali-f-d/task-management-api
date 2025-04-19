@@ -1,3 +1,4 @@
+const e = require('express');
 const express = require('express');
 const fs = require('fs');
 const { MongoClient } = require('mongodb');
@@ -60,6 +61,91 @@ async function main() {
   app.get('/', (req, res) => {
     res.send('Hello World!');
   });
+
+  app
+    .route('/tasks')
+    .get((req, res) => {
+      collection
+        .find()
+        .toArray()
+        .then((tasks) => {
+          res.json({ status: 'success', length: tasks.length, tasks });
+        })
+        .catch((err) => {
+          console.error('Error fetching tasks:', err);
+          res
+            .status(500)
+            .json({ status: 'failed', message: 'Error fetching tasks' });
+        });
+    })
+    .post((req, res) => {
+      const task = req.body;
+      collection.insertOne(task).then(
+        (result) => {
+          res
+            .status(201)
+            .json({ status: 'success', insertedId: result.insertedId });
+        },
+        (err) => {
+          console.error('Error inserting task:', err);
+          res
+            .status(500)
+            .json({ status: 'failed', message: 'Error inserting task' });
+        }
+      );
+    });
+  app
+    .route('/tasks/:name')
+    .get((req, res) => {
+      collection
+        .find({ name: req.params.name })
+        .toArray()
+        .then(
+          (tasks) => {
+            console.log('Fetching task with ID:', req.params.name);
+            console.log('Tasks:', tasks);
+            res.json({ status: 'success', length: tasks.length, tasks });
+          },
+          (err) => {
+            console.error('Error fetching tasks:', err);
+            res.status(500).send('Internal Server Error');
+          }
+        );
+    })
+    .put((req, res) => {
+      const task = req.body;
+      collection.updateOne({ name: req.params.name }, { $set: task }).then(
+        (result) => {
+          res.json({ status: 'success', task });
+        },
+        (err) => {
+          console.error('Error updating task:', err);
+          res.status(500).send('Internal Server Error');
+        }
+      );
+    })
+    .patch((req, res) => {
+      const task = req.body;
+      collection.updateOne({ name: req.params.name }, { $set: task }).then(
+        (result) => {
+          res.json({ status: 'success', modifiedCount: result.modifiedCount });
+        },
+        (err) => {
+          console.error('Error updating task:', err);
+          res.status(500).send('Internal Server Error');
+        }
+      );
+    })
+    .delete((req, res) => {
+      collection.deleteOne({ name: req.params.name }).then(
+        (result) => {
+          res.json({ status: 'success', message: 'Task deleted' });
+        },
+        (err) => {
+          console.error('Error deleting task:', err);
+        }
+      );
+    });
 
   app.listen(port, () => {
     console.log(`Server is running on ${protocol}://${hostname}:${port}`);
