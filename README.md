@@ -23,3 +23,13 @@ node index.js
 ```
 
 5. Open your client application (like a browser or postman or etc) and send your requests to `http://localhost:3000/tasks`.
+
+## How to Use
+
+You can use any http client application to send following requests to api on `http://localhost:3000/tasks`:
+
+1. `GET` request to get all tasks from database
+2. `POST` request to create a new task. you must send a JSON in your request's body and it have to contain a `name` property.
+3. `GET` request to find tasks with specific name. you should request to `localhost:3000/tasks/<name>` where the `<name>` is the `name` of task to search.
+4. `PUT` and `PATCH` requests do the same thing. you must request to `localhost:3000/tasks/<name>` where the `<name>` is the `name` of task to search and send your new data in your request's body to update the first request found with specific `name`.
+5. `DELETE` request to delete the first task with the name you asked by URL as I described for previous requests.
