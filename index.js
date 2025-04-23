@@ -1,9 +1,5 @@
 const express = require('express');
-const { MongoClient } = require('mongodb');
-
-// initializing for MongoDB client
-const mongoURI = 'mongodb://127.0.0.1:27017';
-const client = new MongoClient(mongoURI);
+const mongo = require('./mongo');
 
 // express initialization
 const protocol = 'http';
@@ -12,29 +8,9 @@ const port = 3000;
 const app = express();
 
 // functions
-async function mongoConnect() {
-  try {
-    await client.connect();
-    console.log('Connected to MongoDB');
-    return true;
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
-    return false;
-  }
-}
-
-async function mongoDisconnect() {
-  try {
-    await client.close();
-    console.log('Disconnected from MongoDB');
-  } catch (error) {
-    console.error('Error disconnecting from MongoDB:', error);
-  }
-}
-
 async function uncaughtException(error) {
   console.error('Uncaught Exception:', error);
-  await mongoDisconnect();
+  await mongo.disconnect();
   console.log('Server closed due to uncaught exception');
   process.exit(1);
 }
@@ -42,26 +18,28 @@ async function uncaughtException(error) {
 // api functions
 async function getByName(req, res) {
   try {
-    const tasks = await app.collection
-      .find({ name: req.params.name })
-      .toArray();
+    const tasks = await mongo.getByName(req.params.name);
     res.json({ status: 'success', length: tasks.length, tasks });
   } catch (err) {
-    console.error('Error fetching tasks:', err);
-    res.status(500).send('Internal Server Error');
+    res.status(500).json({
+      status: 'failed',
+      message: 'Error fetching tasks',
+    });
   }
 }
 
 async function updateOneByName(req, res) {
   try {
     const task = req.body;
-    const result = await app.collection.updateOne(
-      { name: req.params.name },
-      { $set: task }
-    );
+    const result = await mongo.updateOneByName(req.params.name, task);
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        status: 'failed',
+        message: 'Task not found',
+      });
+    }
     res.json({ status: 'success', modifiedCount: result.modifiedCount });
   } catch (err) {
-    console.error('Error updating task:', err);
     res.status(500).json({
       status: 'failed',
       message: 'Error updating task',
@@ -71,10 +49,9 @@ async function updateOneByName(req, res) {
 
 async function getAll(req, res) {
   try {
-    const tasks = await app.collection.find().toArray();
+    const tasks = await mongo.getAll();
     res.json({ status: 'success', length: tasks.length, tasks });
   } catch (err) {
-    console.error('Error fetching tasks:', err);
     res.status(500).json({ status: 'failed', message: 'Error fetching tasks' });
   }
 }
@@ -82,17 +59,16 @@ async function getAll(req, res) {
 async function createOne(req, res) {
   try {
     const task = req.body;
-    const result = await app.collection.insertOne(task);
+    const result = await mongo.createOne(task);
     res.status(201).json({ status: 'success', insertedId: result.insertedId });
   } catch (err) {
-    console.error('Error inserting task:', err);
     res.status(500).json({ status: 'failed', message: 'Error inserting task' });
   }
 }
 
 async function deleteOneByName(req, res) {
   try {
-    const result = await app.collection.deleteOne({ name: req.params.name });
+    const result = await mongo.deleteOneByName(req.params.name);
     if (result.deletedCount === 0) {
       return res
         .status(404)
@@ -101,7 +77,6 @@ async function deleteOneByName(req, res) {
 
     res.json({ status: 'success', message: 'Task deleted' });
   } catch (err) {
-    console.error('Error deleting task:', err);
     res.status(500).json({
       status: 'failed',
       message: 'Error deleting task',
@@ -112,14 +87,11 @@ async function deleteOneByName(req, res) {
 // main function
 async function main() {
   // Connect to MongoDB
-  const mongoConnected = await mongoConnect();
+  const mongoConnected = await mongo.connect();
   if (!mongoConnected) {
-    mongoDisconnect();
+    mongo.disconnect();
     return;
   }
-
-  // Getting Database Collection
-  app.collection = client.db('task-manager').collection('tasks');
 
   // Middlewares
   app.use(express.json());
@@ -144,7 +116,7 @@ async function main() {
 
 // take care of closing the connection when the process ends
 process.on('SIGINT', async () => {
-  await mongoDisconnect();
+  await mongo.disconnect();
   console.log('Server closed');
   process.exit(0);
 });
