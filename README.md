@@ -13,7 +13,7 @@ This a simple project for using MongoDB database to add, check, edit or delete t
 
 1. Change your working directory to the path of the project.
 2. Make sure your MongoDB server is running.
-3. If you're not using local MongoDB wothout specific user, you have to change the mongoURI value in `index.js` at line 6 with your connection URI (You can learn more About Connection URI [here](https://www.mongodb.com/docs/drivers/node/current/fundamentals/connection/connect/).)
+3. If you're not using local MongoDB wothout specific user, you have to change the mongoURI value in `mongo.js` at line 4 with your connection URI (You can learn more About Connection URI [here](https://www.mongodb.com/docs/drivers/node/current/fundamentals/connection/connect/).)
 4. Run following commands:
 
 ```
