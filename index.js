@@ -1,10 +1,18 @@
+const dotenv = require('dotenv');
+
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: 'sample.env' });
+} else {
+  dotenv.config({ path: 'production.env' });
+}
+
 const express = require('express');
 const mongo = require('./mongo');
 
 // express initialization
-const protocol = 'http';
-const hostname = 'localhost';
-const port = 3000;
+const protocol = process.env.SERVER_PROTOCOL || 'http';
+const hostname = process.env.SERVER_HOSTNAME || 'localhost';
+const port = process.env.SERVER_PORT || 3000;
 const app = express();
 
 // functions
@@ -16,6 +24,15 @@ async function uncaughtException(error) {
 }
 
 // api functions
+async function getAll(req, res) {
+  try {
+    const tasks = await mongo.getAll();
+    res.json({ status: 'success', length: tasks.length, tasks });
+  } catch (err) {
+    res.status(500).json({ status: 'failed', message: 'Error fetching tasks' });
+  }
+}
+
 async function getByName(req, res) {
   try {
     const tasks = await mongo.getByName(req.params.name);
@@ -25,6 +42,16 @@ async function getByName(req, res) {
       status: 'failed',
       message: 'Error fetching tasks',
     });
+  }
+}
+
+async function createOne(req, res) {
+  try {
+    const task = req.body;
+    const result = await mongo.createOne(task);
+    res.status(201).json({ status: 'success', insertedId: result.insertedId });
+  } catch (err) {
+    res.status(500).json({ status: 'failed', message: 'Error inserting task' });
   }
 }
 
@@ -44,25 +71,6 @@ async function updateOneByName(req, res) {
       status: 'failed',
       message: 'Error updating task',
     });
-  }
-}
-
-async function getAll(req, res) {
-  try {
-    const tasks = await mongo.getAll();
-    res.json({ status: 'success', length: tasks.length, tasks });
-  } catch (err) {
-    res.status(500).json({ status: 'failed', message: 'Error fetching tasks' });
-  }
-}
-
-async function createOne(req, res) {
-  try {
-    const task = req.body;
-    const result = await mongo.createOne(task);
-    res.status(201).json({ status: 'success', insertedId: result.insertedId });
-  } catch (err) {
-    res.status(500).json({ status: 'failed', message: 'Error inserting task' });
   }
 }
 
