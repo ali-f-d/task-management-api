@@ -1,27 +1,6 @@
-const dotenv = require('dotenv');
-
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config({ path: 'sample.env' });
-} else {
-  dotenv.config({ path: 'production.env' });
-}
-
 const express = require('express');
-const mongo = require('./mongo');
 
-// express initialization
-const protocol = process.env.SERVER_PROTOCOL || 'http';
-const hostname = process.env.SERVER_HOSTNAME || 'localhost';
-const port = process.env.SERVER_PORT || 3000;
 const app = express();
-
-// functions
-async function uncaughtException(error) {
-  console.error('Uncaught Exception:', error);
-  await mongo.disconnect();
-  console.log('Server closed due to uncaught exception');
-  process.exit(1);
-}
 
 // api functions
 async function getAll(req, res) {
@@ -92,43 +71,21 @@ async function deleteOneByName(req, res) {
   }
 }
 
-// main function
-async function main() {
-  // Connect to MongoDB
-  const mongoConnected = await mongo.connect();
-  if (!mongoConnected) {
-    mongo.disconnect();
-    return;
-  }
+// Middlewares
+app.use(express.json());
 
-  // Middlewares
-  app.use(express.json());
-
-  // Routes
-  app.get('/', (req, res) => {
-    res.send('Hello World!');
-  });
-
-  app.route('/tasks').get(getAll).post(createOne);
-  app
-    .route('/tasks/:name')
-    .get(getByName)
-    .put(updateOneByName)
-    .patch(updateOneByName)
-    .delete(deleteOneByName);
-
-  app.listen(port, () => {
-    console.log(`Server is running on ${protocol}://${hostname}:${port}`);
-  });
-}
-
-// take care of closing the connection when the process ends
-process.on('SIGINT', async () => {
-  await mongo.disconnect();
-  console.log('Server closed');
-  process.exit(0);
+// Routes
+app.get('/', (req, res) => {
+  res.send('Welcome to the Task Management API!');
 });
-process.on('uncaughtException', uncaughtException);
 
-// Start the server
-main().catch(uncaughtException);
+app.route('/tasks').get(getAll).post(createOne);
+app
+  .route('/tasks/:name')
+  .get(getByName)
+  .put(updateOneByName)
+  .patch(updateOneByName)
+  .delete(deleteOneByName);
+
+// export
+module.exports = app;
